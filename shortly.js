@@ -2,6 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var bcrypt = require('bcrypt-nodejs');
 
 
 var db = require('./app/config');
@@ -80,15 +81,30 @@ app.post('/signup',
 function (req, res) {
   var username = req.body.username;
   var password = req.body.password;
-  console.log('Account credentials: ' + username + ' ' + password);
-  // Generate a SALT value and create a new password
+
   Users.create({
     username: username,
     password: password
   }).then(function (newUser) {
+    // console.log(newUser);
     console.log('User was created!');
     res.redirect('/');
   });
+
+  // new User ({username: username}).fetch().then(function(user){
+  //   if (!user) {
+  //     Users.create({
+  //       username: username,
+  //       password: password
+  //     }).then(function (newUser) {
+  //       // console.log(newUser);
+  //       console.log('User was created!');
+  //       res.redirect('/');
+  //     });
+  //   } else {
+  //     console.log('User already exists!');
+  //   }
+  // });
 });
 
 app.post('/login',
@@ -97,12 +113,29 @@ function (req, res) {
   var password = req.body.password;
   console.log('Account credentials: ' + username + ' ' + password);
 
-  Users.create({
-    username: username,
-    password: password
-  }).then(function (newUser) {
-    console.log('User was created!');
-    res.redirect('/');
+  new User ({username: username}).fetch().then(function(user){
+    if (user) {
+      var salt = user.attributes.salt;
+      var hashedPassword = bcrypt.hashSync(password, salt);
+      // console.log('=============== User ===============');
+      // console.dir(user);
+      // console.log('=============== End ===============');
+      // console.log('Database salt: ' + user.attributes.salt);
+      // console.log('Database password: ' + user.attributes.password);
+      // console.log('Entered password: ' + hashedPassword);
+      if(user.attributes.password === hashedPassword) {
+        console.log('User logged in!');
+        res.redirect('/');
+      } else {
+        // Wrong password
+        console.log('User entered incorrect password!');
+        res.redirect('/login');
+      }
+    } else {
+      // User does not exist
+      console.log('User does not exist!');
+      res.redirect('/login');
+    }
   });
 });
 
