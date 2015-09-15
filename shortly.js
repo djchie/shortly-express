@@ -2,7 +2,10 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+
 var bcrypt = require('bcrypt-nodejs');
+var cookieParser = require('cookie-parser');
+var session = require('express-session');
 
 
 var db = require('./app/config');
@@ -23,6 +26,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
+app.use(cookieParser('shhhh, very secret'));
+app.use(session());
+// app.use(session({ secret: 'session secret', cookie: { maxAge: 60000 }}));
 
 app.get('/', 
 function(req, res) {
@@ -111,18 +117,13 @@ app.post('/login',
 function (req, res) {
   var username = req.body.username;
   var password = req.body.password;
-  console.log('Account credentials: ' + username + ' ' + password);
+  // console.log('Account credentials: ' + username + ' ' + password);
 
   new User ({username: username}).fetch().then(function(user){
     if (user) {
+      // Possibly refactor this password check into user.js
       var salt = user.attributes.salt;
       var hashedPassword = bcrypt.hashSync(password, salt);
-      // console.log('=============== User ===============');
-      // console.dir(user);
-      // console.log('=============== End ===============');
-      // console.log('Database salt: ' + user.attributes.salt);
-      // console.log('Database password: ' + user.attributes.password);
-      // console.log('Entered password: ' + hashedPassword);
       if(user.attributes.password === hashedPassword) {
         console.log('User logged in!');
         res.redirect('/');
