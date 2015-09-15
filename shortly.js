@@ -3,9 +3,8 @@ var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
 
-var bcrypt = require('bcrypt-nodejs');
-var cookieParser = require('cookie-parser');
-var session = require('express-session');
+// var cookieParser = require('cookie-parser');
+// var session = require('express-session');
 
 
 var db = require('./app/config');
@@ -26,13 +25,35 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
-app.use(cookieParser('shhhh, very secret'));
-app.use(session());
+// app.use(cookieParser('shhhh, very secret'));
+// app.use(session());
 // app.use(session({ secret: 'session secret', cookie: { maxAge: 60000 }}));
+// https://codeforgeek.com/2014/09/manage-session-using-node-js-express-4/
+
+app.use(function (req, res, next) {
+  console.log(req.url);
+  if (req.url === '/' || req.url === '/signup' || req.url === '/login') {
+    next();
+  } else if (!req.session) {
+    res.render('login');
+  } else {
+    next();
+  }
+});
 
 app.get('/', 
 function(req, res) {
   res.render('index');
+});
+
+app.get('/signup', 
+function(req, res) {
+  res.render('signup');
+});
+
+app.get('/login', 
+function(req, res) {
+  res.render('login');
 });
 
 app.get('/create', 
@@ -85,6 +106,7 @@ function(req, res) {
 
 app.post('/signup',
 function (req, res) {
+  console.log('got here');
   var username = req.body.username;
   var password = req.body.password;
 
@@ -92,7 +114,8 @@ function (req, res) {
     username: username,
     password: password
   }).then(function (newUser) {
-    // console.log(newUser);
+    console.log('NEW USER??');
+    console.log(newUser);
     console.log('User was created!');
     res.redirect('/');
   });
@@ -119,12 +142,10 @@ function (req, res) {
   var password = req.body.password;
   // console.log('Account credentials: ' + username + ' ' + password);
 
-  new User ({username: username}).fetch().then(function(user){
+  new User({username: username}).fetch().then(function(user){
     if (user) {
-      // Possibly refactor this password check into user.js
       var salt = user.attributes.salt;
-      var hashedPassword = bcrypt.hashSync(password, salt);
-      if(user.attributes.password === hashedPassword) {
+      if(util.hashSaltMatch(password, salt, user.attributes.password)) {
         console.log('User logged in!');
         res.redirect('/');
       } else {
